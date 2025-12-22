@@ -132,3 +132,36 @@ def test_matches_sklearn_pca():
         wpca.explained_variance_ratio_,
         rtol=1e-5,
     )
+
+
+def test_scaling():
+    """Scaling should normalize feature variances."""
+    from weightedpca import WeightedPCA
+
+    rng = np.random.RandomState(42)
+    # Create data with very different scales
+    X = np.column_stack([
+        rng.randn(100) * 1,      # small variance
+        rng.randn(100) * 1000,   # large variance
+    ])
+
+    # Without scaling, large-variance feature dominates
+    wpca_no_scale = WeightedPCA(n_components=2, scale=False)
+    wpca_no_scale.fit(X)
+
+    # With scaling, features are comparable
+    wpca_scaled = WeightedPCA(n_components=2, scale=True)
+    wpca_scaled.fit(X)
+
+    # Check scale_ attribute is set
+    assert wpca_scaled.scale_ is not None
+    assert wpca_scaled.scale_.shape == (2,)
+
+    # With scaling, first PC should not be dominated by feature 1
+    # (components should be more balanced)
+    assert not np.allclose(wpca_no_scale.components_, wpca_scaled.components_)
+
+    # Roundtrip should still work with scaling
+    X_t = wpca_scaled.transform(X)
+    X_back = wpca_scaled.inverse_transform(X_t)
+    np.testing.assert_allclose(X, X_back, rtol=1e-10)
