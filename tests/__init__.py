@@ -1,0 +1,2 @@
+"""Tests for weightedpca package."""
+

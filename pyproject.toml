@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weightedpca"
+version = "0.1.0"
+description = "Weighted Principal Component Analysis"
+readme = "README.rst"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "Chris J."}
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+keywords = ["pca", "weighted", "dimensionality-reduction", "machine-learning"]
+dependencies = [
+    "numpy>=1.20",
+    "scipy>=1.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/byoungj/weightedpca"
+Repository = "https://github.com/byoungj/weightedpca"
+Issues = "https://github.com/byoungj/weightedpca/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["weightedpca*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

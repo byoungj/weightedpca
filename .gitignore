@@ -1,0 +1,58 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# IDE
+.idea/
+.vscode/
+.spyproject/
+*.swp
+*.swo
+
+# Testing / Coverage
+.tox/
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+tests/benchmarks/.benchmarks/
+.pymon
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Documentation
+docs/_api
+docs/_build
+
+# Data / Output files
+data/
+local/
+*.gif
+*.h5
+*.ini
+*.mat
+*.out
+*.output
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
