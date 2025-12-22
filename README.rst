@@ -19,12 +19,10 @@ For full element-wise weighting (where each individual measurement can have its 
 see the `wpca package <https://github.com/jakevdp/wpca>`__, which implements 
 the complete Delchambre (2014) algorithm.
 
-This package is **not part of scikit-learn**, but is designed to be fully compatible with 
-the scikit-learn ecosystem, including:
+This package is **not part of scikit-learn**, but is designed to be compatible with 
+the scikit-learn ecosystem:
 
 - Following scikit-learn's ``fit``/``transform``/``fit_transform`` API
-- Inheriting from scikit-learn's ``_BasePCA``
-- Using scikit-learn's validation utilities
 
 Installation
 ============
