@@ -3,5 +3,6 @@
 __version__ = "0.1.0"
 
 from .weighted_pca import WeightedPCA
+from .weighted_quantile_transformer import WeightedQuantileTransformer
 
-__all__ = ["WeightedPCA"]
+__all__ = ["WeightedPCA", "WeightedQuantileTransformer"]
