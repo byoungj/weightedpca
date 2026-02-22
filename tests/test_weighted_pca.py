@@ -124,7 +124,10 @@ def test_weight_matches_copies():
     """Adding copies of a row should be equivalent to increasing the weight."""
     rng = np.random.RandomState(42)
     n = 100  # Number of original samples
-    X = rng.randn(n, 10)
+    p = 10  # Number of features
+    X = rng.randn(n, p)
+    # Make some data to transform:
+    X_to_transform = rng.randn(20, p)
 
     for row_to_copy in [0, n//2, n-1]:
         for n_copies in [1, 2, 5]:
@@ -135,9 +138,6 @@ def test_weight_matches_copies():
                         np.repeat(X[row_to_copy:row_to_copy+1], n_copies, axis=0)
                     ]
                 )
-                # np.set_printoptions(linewidth=400)
-                # print(X_with_copies.shape)
-                # print(X_with_copies)
                 weights = np.full(n, base_weight)
                 weights[row_to_copy] = base_weight * (n_copies + 1)  # increase weight of row that was copied
 
@@ -149,13 +149,37 @@ def test_weight_matches_copies():
 
                 np.testing.assert_allclose(pca.mean_, wpca.mean_, rtol=1e-10)
                 np.testing.assert_allclose(
-                    np.abs(pca.components_), np.abs(wpca.components_), rtol=1e-10
-                )
-                np.testing.assert_allclose(
                     pca.explained_variance_ratio_,
                     wpca.explained_variance_ratio_,
                     rtol=1e-10,
                 )
+                # Components may differ by sign
+                np.testing.assert_allclose(
+                    np.abs(pca.components_), np.abs(wpca.components_), rtol=1e-10
+                )
+                # More granular test: each component should agree up to overall sign
+                for j_component in range(p):
+                    assert np.allclose(
+                        pca.components_[j_component], wpca.components_[j_component], rtol=1e-10
+                    ) or np.allclose(
+                        pca.components_[j_component], -wpca.components_[j_component], rtol=1e-10
+                    ), f"Component {j_component} does not match"
+
+                # Check that transformed data also matches
+                Y_pca = pca.transform(X_to_transform)
+                Y_wpca = wpca.transform(X_to_transform)
+                for j_component in range(p):
+                    # Components may differ by sign
+                    assert np.allclose(
+                        Y_pca[:, j_component], Y_wpca[:, j_component], rtol=1e-10
+                    ) or np.allclose(
+                        Y_pca[:, j_component], -Y_wpca[:, j_component], rtol=1e-10
+                    ), f"Transformed component {j_component} does not match"
+
+                # Check that inverse-transformed data also matches
+                X_pca_back = pca.inverse_transform(Y_pca)
+                X_wpca_back = wpca.inverse_transform(Y_wpca)
+                np.testing.assert_allclose(X_pca_back, X_wpca_back, rtol=1e-10)
 
 def test_scaling():
     """Scaling should normalize feature variances."""
