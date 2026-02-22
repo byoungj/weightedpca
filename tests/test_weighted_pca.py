@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from weightedpca import WeightedPCA
 
+
 def test_it_runs():
     """Just check it doesn't crash."""
     X = np.array([[1, 2], [3, 4], [5, 6]])
@@ -132,17 +133,16 @@ def test_weight_matches_copies():
     # Make some data to transform:
     X_to_transform = rng.randn(20, p)
 
-    for row_to_copy in [0, n//2, n-1]:
+    for row_to_copy in [0, n // 2, n - 1]:
         for n_copies in [1, 2, 5]:
             for base_weight in [1e-7, 1, 13.7e7]:
                 X_with_copies = np.concatenate(
-                    [
-                        X,
-                        np.repeat(X[row_to_copy:row_to_copy+1], n_copies, axis=0)
-                    ]
+                    [X, np.repeat(X[row_to_copy : row_to_copy + 1], n_copies, axis=0)]
                 )
                 weights = np.full(n, base_weight)
-                weights[row_to_copy] = base_weight * (n_copies + 1)  # increase weight of row that was copied
+                weights[row_to_copy] = base_weight * (
+                    n_copies + 1
+                )  # increase weight of row that was copied
 
                 pca = PCA()
                 pca.fit(X_with_copies)
@@ -163,9 +163,13 @@ def test_weight_matches_copies():
                 # More granular test: each component should agree up to overall sign
                 for j_component in range(p):
                     assert np.allclose(
-                        pca.components_[j_component], wpca.components_[j_component], rtol=1e-10
+                        pca.components_[j_component],
+                        wpca.components_[j_component],
+                        rtol=1e-10,
                     ) or np.allclose(
-                        pca.components_[j_component], -wpca.components_[j_component], rtol=1e-10
+                        pca.components_[j_component],
+                        -wpca.components_[j_component],
+                        rtol=1e-10,
                     ), f"Component {j_component} does not match"
 
                 # Check that transformed data also matches
@@ -189,10 +193,12 @@ def test_scaling():
     """Scaling should normalize feature variances."""
     rng = np.random.RandomState(42)
     # Create data with very different scales
-    X = np.column_stack([
-        rng.randn(100) * 1,      # small variance
-        rng.randn(100) * 1000,   # large variance
-    ])
+    X = np.column_stack(
+        [
+            rng.randn(100) * 1,  # small variance
+            rng.randn(100) * 1000,  # large variance
+        ]
+    )
 
     # Without scaling, large-variance feature dominates
     wpca_no_scale = WeightedPCA(n_components=2, scale=False)
@@ -221,29 +227,29 @@ def test_sklearn_compatibility():
     rng = np.random.RandomState(42)
     n_samples = 100
     n_features = 20
-    
+
     # Generate synthetic data
     X = rng.randn(n_samples, n_features)
     # Create binary classification labels
     y = (X[:, 0] + X[:, 1] > 0).astype(int)
     weights = rng.uniform(0.1, 2, n_samples)
-    
+
     for weights_to_use in [weights, None]:
         # Test: StandardScaler -> WeightedPCA -> LogisticRegression
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
-        
+
         wpca = WeightedPCA(n_components=10)
         X_pca = wpca.fit_transform(X_scaled, sample_weight=weights_to_use)
-        
+
         clf = LogisticRegression(random_state=42, max_iter=1000)
         clf.fit(X_pca, y)
-        
+
         # Check that classifier can make predictions
         y_pred = clf.predict(X_pca)
         assert y_pred.shape == (n_samples,)
         assert np.all(np.isin(y_pred, [0, 1]))
-        
+
         # Check that score works
         score = clf.score(X_pca, y)
         assert 0 <= score <= 1

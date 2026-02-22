@@ -66,7 +66,9 @@ class WeightedPCA:
     def _weighted_std(self, X_centered, sample_weight):
         """Compute weighted standard deviation."""
         sum_w = np.sum(sample_weight)
-        variance = np.sum(sample_weight[:, np.newaxis] * X_centered**2, axis=0) / sum_w
+        variance = (
+            np.sum(sample_weight[:, np.newaxis] * X_centered**2, axis=0) / sum_w
+        )
         std = np.sqrt(variance)
         # Replace zero std with 1 to avoid division by zero (constant features stay unchanged)
         std[std == 0] = 1.0
