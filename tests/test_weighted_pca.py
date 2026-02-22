@@ -2,6 +2,8 @@
 
 import numpy as np
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
 from weightedpca import WeightedPCA
 
 def test_it_runs():
@@ -120,6 +122,7 @@ def test_matches_sklearn_pca():
         rtol=1e-5,
     )
 
+
 def test_weight_matches_copies():
     """Adding copies of a row should be equivalent to increasing the weight."""
     rng = np.random.RandomState(42)
@@ -181,6 +184,7 @@ def test_weight_matches_copies():
                 X_wpca_back = wpca.inverse_transform(Y_wpca)
                 np.testing.assert_allclose(X_pca_back, X_wpca_back, rtol=1e-10)
 
+
 def test_scaling():
     """Scaling should normalize feature variances."""
     rng = np.random.RandomState(42)
@@ -210,3 +214,36 @@ def test_scaling():
     X_t = wpca_scaled.transform(X)
     X_back = wpca_scaled.inverse_transform(X_t)
     np.testing.assert_allclose(X, X_back, rtol=1e-10)
+
+
+def test_sklearn_compatibility():
+    """WeightedPCA should work in a pipeline with other sklearn classes."""
+    rng = np.random.RandomState(42)
+    n_samples = 100
+    n_features = 20
+    
+    # Generate synthetic data
+    X = rng.randn(n_samples, n_features)
+    # Create binary classification labels
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+    weights = rng.uniform(0.1, 2, n_samples)
+    
+    for weights_to_use in [weights, None]:
+        # Test: StandardScaler -> WeightedPCA -> LogisticRegression
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        
+        wpca = WeightedPCA(n_components=10)
+        X_pca = wpca.fit_transform(X_scaled, sample_weight=weights_to_use)
+        
+        clf = LogisticRegression(random_state=42, max_iter=1000)
+        clf.fit(X_pca, y)
+        
+        # Check that classifier can make predictions
+        y_pred = clf.predict(X_pca)
+        assert y_pred.shape == (n_samples,)
+        assert np.all(np.isin(y_pred, [0, 1]))
+        
+        # Check that score works
+        score = clf.score(X_pca, y)
+        assert 0 <= score <= 1
