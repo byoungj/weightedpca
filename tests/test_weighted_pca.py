@@ -1,11 +1,14 @@
 """Tests for WeightedPCA."""
 
 import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from weightedpca import WeightedPCA
+
 
 def test_it_runs():
     """Just check it doesn't crash."""
-    from weightedpca import WeightedPCA
-
     X = np.array([[1, 2], [3, 4], [5, 6]])
     wpca = WeightedPCA(n_components=2)
     wpca.fit(X)
@@ -15,8 +18,6 @@ def test_it_runs():
 
 def test_shapes():
     """Test output shapes."""
-    from weightedpca import WeightedPCA
-
     X = np.random.randn(100, 10)
     wpca = WeightedPCA(n_components=5)
     X_t = wpca.fit_transform(X)
@@ -28,8 +29,6 @@ def test_shapes():
 
 def test_inverse_transform():
     """Roundtrip should recover original."""
-    from weightedpca import WeightedPCA
-
     X = np.random.randn(50, 5)
     wpca = WeightedPCA(n_components=5)
     X_t = wpca.fit_transform(X)
@@ -40,30 +39,28 @@ def test_inverse_transform():
 
 def test_uniform_weights_equals_no_weights():
     """Uniform weights should give same result as no weights."""
-    from weightedpca import WeightedPCA
-
     rng = np.random.RandomState(42)
-    X = rng.randn(50, 10)
-    weights = np.ones(50)
+    n = 50
+    X = rng.randn(n, 10)
+    for weight in [2e-7, 1, 13.7e6]:
+        weights = np.full(n, weight)
 
-    wpca_no_weights = WeightedPCA(n_components=5)
-    wpca_no_weights.fit(X)
+        wpca_no_weights = WeightedPCA(n_components=5)
+        wpca_no_weights.fit(X)
 
-    wpca_uniform = WeightedPCA(n_components=5)
-    wpca_uniform.fit(X, sample_weight=weights)
+        wpca_uniform = WeightedPCA(n_components=5)
+        wpca_uniform.fit(X, sample_weight=weights)
 
-    np.testing.assert_allclose(wpca_no_weights.mean_, wpca_uniform.mean_)
-    np.testing.assert_allclose(
-        np.abs(wpca_no_weights.components_),
-        np.abs(wpca_uniform.components_),
-        rtol=1e-10,
-    )
+        np.testing.assert_allclose(wpca_no_weights.mean_, wpca_uniform.mean_)
+        np.testing.assert_allclose(
+            np.abs(wpca_no_weights.components_),
+            np.abs(wpca_uniform.components_),
+            rtol=1e-10,
+        )
 
 
 def test_weights_affect_mean():
     """Weighted mean should differ from unweighted mean."""
-    from weightedpca import WeightedPCA
-
     X = np.array([[0, 0], [10, 10]])
     weights = np.array([1.0, 9.0])  # heavily weight second sample
 
@@ -76,8 +73,6 @@ def test_weights_affect_mean():
 
 def test_weights_change_components():
     """Different weights should give different components."""
-    from weightedpca import WeightedPCA
-
     rng = np.random.RandomState(123)
     X = rng.randn(100, 5)
     w1 = np.ones(100)
@@ -95,8 +90,6 @@ def test_weights_change_components():
 
 def test_explained_variance():
     """Should have explained_variance_ratio_ attribute."""
-    from weightedpca import WeightedPCA
-
     rng = np.random.RandomState(42)
     X = rng.randn(50, 10)
 
@@ -111,9 +104,6 @@ def test_explained_variance():
 
 def test_matches_sklearn_pca():
     """With uniform weights, should match sklearn PCA."""
-    from sklearn.decomposition import PCA
-    from weightedpca import WeightedPCA
-
     rng = np.random.RandomState(42)
     X = rng.randn(100, 10)
 
@@ -134,16 +124,81 @@ def test_matches_sklearn_pca():
     )
 
 
+def test_weight_matches_copies():
+    """Adding copies of a row should be equivalent to increasing the weight."""
+    rng = np.random.RandomState(42)
+    n = 100  # Number of original samples
+    p = 10  # Number of features
+    X = rng.randn(n, p)
+    # Make some data to transform:
+    X_to_transform = rng.randn(20, p)
+
+    for row_to_copy in [0, n // 2, n - 1]:
+        for n_copies in [1, 2, 5]:
+            for base_weight in [1e-7, 1, 13.7e7]:
+                X_with_copies = np.concatenate(
+                    [X, np.repeat(X[row_to_copy : row_to_copy + 1], n_copies, axis=0)]
+                )
+                weights = np.full(n, base_weight)
+                weights[row_to_copy] = base_weight * (
+                    n_copies + 1
+                )  # increase weight of row that was copied
+
+                pca = PCA()
+                pca.fit(X_with_copies)
+
+                wpca = WeightedPCA()
+                wpca.fit(X, sample_weight=weights)
+
+                np.testing.assert_allclose(pca.mean_, wpca.mean_, rtol=1e-10)
+                np.testing.assert_allclose(
+                    pca.explained_variance_ratio_,
+                    wpca.explained_variance_ratio_,
+                    rtol=1e-10,
+                )
+                # Components may differ by sign
+                np.testing.assert_allclose(
+                    np.abs(pca.components_), np.abs(wpca.components_), rtol=1e-10
+                )
+                # More granular test: each component should agree up to overall sign
+                for j_component in range(p):
+                    assert np.allclose(
+                        pca.components_[j_component],
+                        wpca.components_[j_component],
+                        rtol=1e-10,
+                    ) or np.allclose(
+                        pca.components_[j_component],
+                        -wpca.components_[j_component],
+                        rtol=1e-10,
+                    ), f"Component {j_component} does not match"
+
+                # Check that transformed data also matches
+                Y_pca = pca.transform(X_to_transform)
+                Y_wpca = wpca.transform(X_to_transform)
+                for j_component in range(p):
+                    # Components may differ by sign
+                    assert np.allclose(
+                        Y_pca[:, j_component], Y_wpca[:, j_component], rtol=1e-10
+                    ) or np.allclose(
+                        Y_pca[:, j_component], -Y_wpca[:, j_component], rtol=1e-10
+                    ), f"Transformed component {j_component} does not match"
+
+                # Check that inverse-transformed data also matches
+                X_pca_back = pca.inverse_transform(Y_pca)
+                X_wpca_back = wpca.inverse_transform(Y_wpca)
+                np.testing.assert_allclose(X_pca_back, X_wpca_back, rtol=1e-10)
+
+
 def test_scaling():
     """Scaling should normalize feature variances."""
-    from weightedpca import WeightedPCA
-
     rng = np.random.RandomState(42)
     # Create data with very different scales
-    X = np.column_stack([
-        rng.randn(100) * 1,      # small variance
-        rng.randn(100) * 1000,   # large variance
-    ])
+    X = np.column_stack(
+        [
+            rng.randn(100) * 1,  # small variance
+            rng.randn(100) * 1000,  # large variance
+        ]
+    )
 
     # Without scaling, large-variance feature dominates
     wpca_no_scale = WeightedPCA(n_components=2, scale=False)
@@ -165,3 +220,36 @@ def test_scaling():
     X_t = wpca_scaled.transform(X)
     X_back = wpca_scaled.inverse_transform(X_t)
     np.testing.assert_allclose(X, X_back, rtol=1e-10)
+
+
+def test_sklearn_compatibility():
+    """WeightedPCA should work in a pipeline with other sklearn classes."""
+    rng = np.random.RandomState(42)
+    n_samples = 100
+    n_features = 20
+
+    # Generate synthetic data
+    X = rng.randn(n_samples, n_features)
+    # Create binary classification labels
+    y = (X[:, 0] + X[:, 1] > 0).astype(int)
+    weights = rng.uniform(0.1, 2, n_samples)
+
+    for weights_to_use in [weights, None]:
+        # Test: StandardScaler -> WeightedPCA -> LogisticRegression
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        wpca = WeightedPCA(n_components=10)
+        X_pca = wpca.fit_transform(X_scaled, sample_weight=weights_to_use)
+
+        clf = LogisticRegression(random_state=42, max_iter=1000)
+        clf.fit(X_pca, y)
+
+        # Check that classifier can make predictions
+        y_pred = clf.predict(X_pca)
+        assert y_pred.shape == (n_samples,)
+        assert np.all(np.isin(y_pred, [0, 1]))
+
+        # Check that score works
+        score = clf.score(X_pca, y)
+        assert 0 <= score <= 1
