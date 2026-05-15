@@ -48,7 +48,7 @@ def test_uniform_weights_matches_sklearn():
         transformer_weighted = WeightedQuantileTransformer(
             n_quantiles=20, output_distribution=distribution, random_state=42
         )
-        transformer_weighted.fit(X, sample_weight=np.ones(len(X)))
+        transformer_weighted.fit(X, weights=np.ones(len(X)))
 
         # sklearn QuantileTransformer
         transformer_sklearn = QuantileTransformer(
@@ -106,7 +106,7 @@ def test_weight_equivalence_to_repetition():
                         output_distribution=distribution,
                         random_state=42,
                     )
-                    transformer_weighted.fit(X, sample_weight=weights)
+                    transformer_weighted.fit(X, weights=weights)
 
                     # Fit transformer on repeated data (uniform weights)
                     transformer_repeated = QuantileTransformer(
@@ -140,9 +140,9 @@ def test_weight_scaling_invariance():
     transformer_2 = WeightedQuantileTransformer(n_quantiles=10, random_state=42)
     transformer_3 = WeightedQuantileTransformer(n_quantiles=10, random_state=42)
 
-    transformer_1.fit(X, sample_weight=weights_1)
-    transformer_2.fit(X, sample_weight=weights_2)
-    transformer_3.fit(X, sample_weight=weights_3)
+    transformer_1.fit(X, weights=weights_1)
+    transformer_2.fit(X, weights=weights_2)
+    transformer_3.fit(X, weights=weights_3)
 
     # Transformations should be identical when weights are scaled
     # (empirical CDF is scale-invariant)
@@ -164,7 +164,7 @@ def test_inverse_transform():
     transformer = WeightedQuantileTransformer(
         n_quantiles=50, output_distribution="uniform"
     )
-    transformer.fit(X, sample_weight=weights)
+    transformer.fit(X, weights=weights)
 
     X_transformed = transformer.transform(X)
     X_reconstructed = transformer.inverse_transform(X_transformed)
@@ -182,7 +182,7 @@ def test_multivariate_data():
     transformer = WeightedQuantileTransformer(
         n_quantiles=25, output_distribution="uniform"
     )
-    X_transformed = transformer.fit_transform(X, sample_weight=weights)
+    X_transformed = transformer.fit_transform(X, weights=weights)
 
     # Check shape
     assert X_transformed.shape == X.shape
@@ -205,7 +205,7 @@ def test_no_weights_equals_uniform_weights():
     )
 
     transformer_no_weights.fit(X)
-    transformer_uniform_weights.fit(X, sample_weight=np.ones(20))
+    transformer_uniform_weights.fit(X, weights=np.ones(20))
 
     # Quantiles should be identical
     np.testing.assert_allclose(
@@ -221,7 +221,7 @@ def test_single_sample_high_weight():
     weights = np.array([1, 1, 100, 1, 1])  # Middle sample dominates
 
     transformer = WeightedQuantileTransformer(n_quantiles=20)
-    transformer.fit(X, sample_weight=weights)
+    transformer.fit(X, weights=weights)
 
     # The 0.5 quantile (median) should be close to 3 since value 3 has weight 100/104
     quantile_values = transformer._compute_weighted_quantiles(
@@ -241,7 +241,7 @@ def test_zero_weight_samples_ignored():
     transformer_weighted = WeightedQuantileTransformer(n_quantiles=5, random_state=42)
     transformer_reduced = WeightedQuantileTransformer(n_quantiles=5, random_state=42)
 
-    transformer_weighted.fit(X, sample_weight=weights)
+    transformer_weighted.fit(X, weights=weights)
     transformer_reduced.fit(X_reduced)
 
     # Quantiles should behave similarly (zero weights largely ignored)
@@ -290,7 +290,7 @@ def test_subsample_parameter():
     transformer = WeightedQuantileTransformer(
         n_quantiles=50, subsample=100, random_state=42
     )
-    transformer.fit(X, sample_weight=weights)
+    transformer.fit(X, weights=weights)
 
     # Should still work and produce reasonable results
     X_test = np.random.RandomState(43).randn(10, 2)
@@ -353,7 +353,7 @@ def test_negative_weights_error():
     transformer = WeightedQuantileTransformer()
 
     with pytest.raises(ValueError, match="negative"):
-        transformer.fit(X, sample_weight=weights)
+        transformer.fit(X, weights=weights)
 
 
 def test_zero_sum_weights_error():
@@ -364,7 +364,7 @@ def test_zero_sum_weights_error():
     transformer = WeightedQuantileTransformer()
 
     with pytest.raises(ValueError, match="sum.*positive"):
-        transformer.fit(X, sample_weight=weights)
+        transformer.fit(X, weights=weights)
 
 
 def test_mismatched_weights_error():
@@ -374,8 +374,8 @@ def test_mismatched_weights_error():
 
     transformer = WeightedQuantileTransformer()
 
-    with pytest.raises(ValueError, match="sample_weight has"):
-        transformer.fit(X, sample_weight=weights)
+    with pytest.raises(ValueError, match="weights has"):
+        transformer.fit(X, weights=weights)
 
 
 def test_transform_before_fit_error():
@@ -407,8 +407,8 @@ def test_reproducibility_with_random_state():
     transformer_1 = WeightedQuantileTransformer(subsample=100, random_state=42)
     transformer_2 = WeightedQuantileTransformer(subsample=100, random_state=42)
 
-    transformer_1.fit(X, sample_weight=weights)
-    transformer_2.fit(X, sample_weight=weights)
+    transformer_1.fit(X, weights=weights)
+    transformer_2.fit(X, weights=weights)
 
     # Should produce identical quantiles
     np.testing.assert_array_equal(transformer_1.quantiles_, transformer_2.quantiles_)
@@ -425,7 +425,7 @@ def test_weighted_vs_unweighted_difference():
     # Skewed weights (emphasize lower values)
     transformer_weighted = WeightedQuantileTransformer(n_quantiles=10)
     weights = np.array([5, 3, 1, 1, 1])
-    transformer_weighted.fit(X, sample_weight=weights)
+    transformer_weighted.fit(X, weights=weights)
 
     # Quantiles should be different
     assert not np.allclose(
@@ -439,7 +439,7 @@ def test_extreme_weights():
     weights = np.array([1e-10, 1e-10, 1.0, 1e-10, 1e-10])
 
     transformer = WeightedQuantileTransformer(n_quantiles=10)
-    transformer.fit(X, sample_weight=weights)
+    transformer.fit(X, weights=weights)
 
     # Should still work
     X_test = np.array([[2.5], [3.0], [3.5]])
@@ -455,7 +455,7 @@ def test_transform_preserves_order():
     weights = np.random.RandomState(42).rand(30)
 
     transformer = WeightedQuantileTransformer(n_quantiles=15)
-    transformer.fit(X, sample_weight=weights)
+    transformer.fit(X, weights=weights)
 
     X_test = np.sort(np.random.RandomState(43).randn(20, 1), axis=0)
     X_transformed = transformer.transform(X_test)
@@ -471,7 +471,7 @@ def test_quantiles_sorted():
     weights = np.random.RandomState(42).rand(50)
 
     transformer = WeightedQuantileTransformer(n_quantiles=25)
-    transformer.fit(X, sample_weight=weights)
+    transformer.fit(X, weights=weights)
 
     # Each feature's quantiles should be sorted
     for i in range(X.shape[1]):

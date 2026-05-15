@@ -56,19 +56,19 @@ Quick Start
 
     # Fit weighted PCA
     wpca = WeightedPCA(n_components=2)
-    wpca.fit(X, sample_weight=weights)
+    wpca.fit(X, weights=weights)
 
     # Transform data
     X_transformed = wpca.transform(X)
 
     # Or use fit_transform
-    X_transformed = wpca.fit_transform(X, sample_weight=weights)
+    X_transformed = wpca.fit_transform(X, weights=weights)
 
 
 Usage with scikit-learn Pipelines
 =================================
 
-WeightedPCA can be used in pipelines. Note that ``sample_weight`` should be 
+WeightedPCA can be used in pipelines. Note that ``weights`` should be 
 applied during the WeightedPCA fitting step before the pipeline:
 
 .. code-block:: python
@@ -80,7 +80,7 @@ applied during the WeightedPCA fitting step before the pipeline:
 
     # Fit WeightedPCA separately with sample weights
     wpca = WeightedPCA(n_components=10)
-    X_reduced = wpca.fit_transform(X, sample_weight=weights)
+    X_reduced = wpca.fit_transform(X, weights=weights)
 
     # Then use pipeline for downstream processing
     pipeline = Pipeline([
@@ -108,7 +108,7 @@ Comparison with Standard PCA
 
     # Weighted PCA
     wpca = WeightedPCA(n_components=5)
-    X_wpca = wpca.fit_transform(X, sample_weight=weights)
+    X_wpca = wpca.fit_transform(X, weights=weights)
 
     print(f"Standard PCA explained variance: {pca.explained_variance_ratio_}")
     print(f"Weighted PCA explained variance: {wpca.explained_variance_ratio_}")

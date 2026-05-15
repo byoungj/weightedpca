@@ -49,7 +49,7 @@ def test_uniform_weights_equals_no_weights():
         wpca_no_weights.fit(X)
 
         wpca_uniform = WeightedPCA(n_components=5)
-        wpca_uniform.fit(X, sample_weight=weights)
+        wpca_uniform.fit(X, weights=weights)
 
         np.testing.assert_allclose(wpca_no_weights.mean_, wpca_uniform.mean_)
         np.testing.assert_allclose(
@@ -65,7 +65,7 @@ def test_weights_affect_mean():
     weights = np.array([1.0, 9.0])  # heavily weight second sample
 
     wpca = WeightedPCA(n_components=2)
-    wpca.fit(X, sample_weight=weights)
+    wpca.fit(X, weights=weights)
 
     # Weighted mean should be closer to [10, 10]
     np.testing.assert_allclose(wpca.mean_, [9.0, 9.0])
@@ -79,10 +79,10 @@ def test_weights_change_components():
     w2 = rng.uniform(0.1, 10, 100)
 
     wpca1 = WeightedPCA(n_components=3)
-    wpca1.fit(X, sample_weight=w1)
+    wpca1.fit(X, weights=w1)
 
     wpca2 = WeightedPCA(n_components=3)
-    wpca2.fit(X, sample_weight=w2)
+    wpca2.fit(X, weights=w2)
 
     # Components should NOT be equal
     assert not np.allclose(wpca1.components_, wpca2.components_)
@@ -148,7 +148,7 @@ def test_weight_matches_copies():
                 pca.fit(X_with_copies)
 
                 wpca = WeightedPCA()
-                wpca.fit(X, sample_weight=weights)
+                wpca.fit(X, weights=weights)
 
                 np.testing.assert_allclose(pca.mean_, wpca.mean_, rtol=1e-10)
                 np.testing.assert_allclose(
@@ -240,7 +240,7 @@ def test_sklearn_compatibility():
         X_scaled = scaler.fit_transform(X)
 
         wpca = WeightedPCA(n_components=10)
-        X_pca = wpca.fit_transform(X_scaled, sample_weight=weights_to_use)
+        X_pca = wpca.fit_transform(X_scaled, weights=weights_to_use)
 
         clf = LogisticRegression(random_state=42, max_iter=1000)
         clf.fit(X_pca, y)

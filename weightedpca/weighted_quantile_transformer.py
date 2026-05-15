@@ -71,7 +71,7 @@ class WeightedQuantileTransformer:
         self.random_state = random_state
         self.copy = copy
 
-    def fit(self, X, sample_weight=None):
+    def fit(self, X, weights=None):
         """Fit the weighted quantile transformer.
 
         Parameters
@@ -79,7 +79,7 @@ class WeightedQuantileTransformer:
         X : array-like of shape (n_samples, n_features)
             The data used to compute the weighted quantiles.
 
-        sample_weight : array-like of shape (n_samples,), default=None
+        weights : array-like of shape (n_samples,), default=None
             Individual weights for each sample. If None, all samples have
             equal weight of 1.
 
@@ -99,41 +99,41 @@ class WeightedQuantileTransformer:
         self.X_train_ = X.copy()
 
         # Handle weights
-        if sample_weight is None:
-            sample_weight = np.ones(n_samples)
+        if weights is None:
+            weights = np.ones(n_samples)
         else:
-            sample_weight = np.asarray(sample_weight).copy()
+            weights = np.asarray(weights).copy()
 
         # Store weights for transform
-        self.weights_train_ = sample_weight.copy()
+        self.weights_train_ = weights.copy()
 
         # Validate weights
-        if sample_weight.shape[0] != n_samples:
+        if weights.shape[0] != n_samples:
             raise ValueError(
-                f"sample_weight has {sample_weight.shape[0]} samples "
+                f"weights has {weights.shape[0]} samples "
                 f"but X has {n_samples} samples"
             )
-        if np.any(sample_weight < 0):
-            raise ValueError("sample_weight cannot contain negative values")
-        if np.sum(sample_weight) == 0:
-            raise ValueError("sum of sample_weight must be positive")
+        if np.any(weights < 0):
+            raise ValueError("weights cannot contain negative values")
+        if np.sum(weights) == 0:
+            raise ValueError("sum of weights must be positive")
 
         # Normalize weights by dividing by the minimum non-zero weight
-        min_weight = np.min(sample_weight[sample_weight > 0])
-        sample_weight = sample_weight / min_weight
+        min_weight = np.min(weights[weights > 0])
+        weights = weights / min_weight
 
         # Handle subsampling
         if self.subsample is not None and n_samples > self.subsample:
-            X_sub, sample_weight_sub = self._subsample(X, sample_weight, self.subsample)
+            X_sub, weights_sub = self._subsample(X, weights, self.subsample)
             # For transform, use the subsampled data
             self.X_train_ = X_sub.copy()
-            self.weights_train_ = sample_weight_sub.copy()
+            self.weights_train_ = weights_sub.copy()
             X = X_sub
-            sample_weight = sample_weight_sub
+            weights = weights_sub
             n_samples = X.shape[0]
 
         # Use total weight as the virtual sample count
-        total_weight = np.sum(sample_weight)
+        total_weight = np.sum(weights)
 
         # Determine actual number of quantiles
         # Always use n_quantiles as specified, capped at the number of distinct samples
@@ -151,7 +151,7 @@ class WeightedQuantileTransformer:
 
         for feature_idx in range(n_features):
             self.quantiles_[:, feature_idx] = self._compute_weighted_quantiles(
-                X[:, feature_idx], sample_weight, total_weight, self.references_
+                X[:, feature_idx], weights, total_weight, self.references_
             )
 
         return self
@@ -201,7 +201,7 @@ class WeightedQuantileTransformer:
 
         return X_transformed
 
-    def fit_transform(self, X, sample_weight=None):
+    def fit_transform(self, X, weights=None):
         """Fit to data, then transform it.
 
         Parameters
@@ -209,7 +209,7 @@ class WeightedQuantileTransformer:
         X : array-like of shape (n_samples, n_features)
             The data used to compute the weighted quantiles and to transform.
 
-        sample_weight : array-like of shape (n_samples,), default=None
+        weights : array-like of shape (n_samples,), default=None
             Individual weights for each sample.
 
         Returns
@@ -217,7 +217,7 @@ class WeightedQuantileTransformer:
         X_transformed : ndarray of shape (n_samples, n_features)
             The transformed data.
         """
-        return self.fit(X, sample_weight=sample_weight).transform(X)
+        return self.fit(X, weights=weights).transform(X)
 
     def inverse_transform(self, X):
         """Transform back to the original representation.
@@ -394,7 +394,7 @@ class WeightedQuantileTransformer:
 
         return quantile_positions
 
-    def _subsample(self, X, sample_weight, n_subsample):
+    def _subsample(self, X, weights, n_subsample):
         """Subsample the data while respecting weights.
 
         Parameters
@@ -402,7 +402,7 @@ class WeightedQuantileTransformer:
         X : array-like of shape (n_samples, n_features)
             Input data.
 
-        sample_weight : array-like of shape (n_samples,)
+        weights : array-like of shape (n_samples,)
             Sample weights.
 
         n_subsample : int
@@ -419,7 +419,7 @@ class WeightedQuantileTransformer:
         rng = np.random.RandomState(self.random_state)
 
         # Normalize weights for sampling probabilities
-        normalized_weights = sample_weight / np.sum(sample_weight)
+        normalized_weights = weights / np.sum(weights)
 
         # Sample according to weights
         indices = rng.choice(
